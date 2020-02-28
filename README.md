@@ -93,6 +93,78 @@ AWS Glue 콘솔에서 크롤러 작업의 단계에 따라 s3://awsglue-datasets
 
  * 이후, [Open Notebook] 을 이용하여 Notebook을 기동합니다. 
 
+## Data Load Test를 위한 Redshift Cluster 생성
+
+ * Console redshift 메뉴로 이동합니다. 
+
+ * [Create cluster] 를 선택합니다. 
+
+ * DC2 3 Node를 선택합니다. 
+
+ * 이름을 redshift-glue-test 로 기입합니다. 
+
+ * Master User 정도는 그대로 두고, Master password를 입력합니다. (기억해 두셔야 합니다.)
+
+ * IAM에 'AWSServiceRoleForRedshift'를 선택합니다
+
+ * 생성합니다. Default로 Database Name은 dev 로 생성되며, Security Group 및, Public Accessibility가 False로 설정되어 있습니다. 이럴 경우, 외부에서 접근이 불가능하여 no VPC Dev Endpoint에서는 접근이 어렵습니다. 
+
+ * 생성이 완료되면, 해당 Cluster를 선택하고, [Properties] 탭으로 이동합니다. 
+
+ * 제일 하단에 있는 Public Accessible 항목을 Yes로 수정합니다. EIP는 별도 선택이 없으면, 자동으로 할당합니다. 
+
+ * 수정을 한 이후 잠시 기다리면 (2분), 해당 항목이 Yes로 바뀐 것을 확인할 수 있습니다. 이제 Security Group를 수정해야 합니다. 
+
+ * 마찬가지로 [Properties] 탭 하단에 있는 할당되어 있는 Security Group을 선택합니다. 
+
+ * 별도의 창이 뜨면, 해당 Security Group을 선택하고, 하단에 있는 [Inbound] 탭을 선택합니다. 
+
+ * [Edit] 버튼을 선택하고, 창이 뜨면, Type을 [Redshift] 항목으로 수정하고, [Source]를 [Anywhere] 로 변경하십시요. 
+
+ * 추가적으로 Type을 [All TCP]로 수정하고, [Source]를 동일한 Security Group으로 지정합니다. 이는 향후 JDBC Connection을 연결하기 위해서 ENI를 해당 VPC에 추가할때, ENI에 Redshift에 부여된 SG를 부여하기 때문입니다.
+
+ * [Save] 버튼을 선택하면 설정이 모두 완료되었습니다. 
+
+ * Redshift의 [Properties] 탭을 선택하고, endpoint를 복사하거나, 별도로 적어 두시기 바랍니다. 이후 Glue Connection 생성시 활용됩니다. 
+
+## Data Load Test를 위한 VPC S3 Endpoint 생성
+
+ * Console상에서 VPC 메뉴를 선택합니다. 
+ 
+ * 왼쪽에 있는 Endpoint 메뉴를 선택합니다. 
+
+ * [Create Endpoint] 를 선택합니다. 
+
+ * Service Name에 s3를 입력하고 검색을 하면, com.amazonaws.us-west-2.s3 가 검색됩니다. 
+
+ * VPC를 Default VPC를 선택하고, [Create Endpoint]를 선택합니다. 
+
+## Data Load Test를 위한 Glue Connection 생성
+
+ * Console에서 Glue 메뉴로 이동합니다. 
+
+ * 왼쪽에 있는 Databases / Connections 메뉴를 선택합니다. 
+
+ * [Add Connection] 을 선택합니다. 
+
+ * 이름은 반드시 redshift-glue-test 로 입력합니다. Connection Type은 JDBC를 선택합니다. 
+
+ * jdbc 항목에 위에서 생성한 Redshift의 Endpoint를 이용하여 아래와 같이 적어 줍니다. 
+   jdbc:redshift://<your redshift cluster endpoint>:5439/dev
+
+ * username에는 awsuser, Password에는 앞에서 입력한 password를 넣어 주세요. 
+
+ * VPC는 Default VPC를 적습니다. 
+
+ * Subnet은 한개를 선택해 주세요. 
+
+ * Security Group을 Default Security Group를 선택하십시요.
+
+ * 생성을 완료합니다. 
+
+ * 원래 화면에서, 생성된 Connection을 선택하고, [Test Connection]을 수행합니다. (시간이 2분 정도 걸림) 상단에
+   redshift-glue-test connected successfully to your instance
+   가 나오면 정상입니다. 
 
 ## Notebook에서 수행 Script 작성 (Optional)
 
@@ -120,4 +192,3 @@ glueContext = GlueContext(SparkContext.getOrCreate())
  * 본 Project에 포함되어 있는 [Joining, Filtering, Loading Relational Data with Glue - In KR.ipynb] 파일을 Notebook 상단오른쪽에 있는 [Upload] 버튼을 클릭하여 로드해 주세요. 
 
  * 이후에는 해당 Example을 따라가면서 수행을 진행해 보십시요.
- 
